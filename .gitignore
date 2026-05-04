@@ -1,0 +1,33 @@
+HELP.md
+
+# Maven
+target/
+
+# Spring Boot config
+application.properties
+application.yml
+
+# IDE - IntelliJ
+.idea/
+*.iml
+
+# Eclipse / STS
+.classpath
+.project
+.settings
+.springBeans
+.apt_generated
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
