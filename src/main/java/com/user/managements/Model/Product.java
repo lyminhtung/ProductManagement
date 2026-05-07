@@ -1,22 +1,41 @@
 package com.user.managements.Model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
+
+import java.util.Calendar;
 
 @Entity// Khai báo để biết đây là 1 thực thể
 //POJO = Plain Object Java Object
+@Table(name = "product")
 public class Product {
     // đây là primary  key
-    @GeneratedValue(strategy = GenerationType.AUTO)//để cấp cho nó 1 kiểu strategy kiểu thụ động có nghĩa là tự generate auto-increment
+    //để cấp cho nó 1 kiểu strategy kiểu thụ động có nghĩa là tự generate auto-increment
+//    @GeneratedValue(strategy = GenerationType.AUTO)
+
     @Id
+    @SequenceGenerator(
+            // đặt quy tắc để tạo ra
+            name = "product_sequence",
+            sequenceName = "product_sequence",
+            allocationSize = 1
+    )
+    @GeneratedValue(
+            strategy = GenerationType.SEQUENCE,
+            generator = "product_sequence"
+    )
     private long id;
+    @Column(nullable = false,  unique = true, length = 300)
     private String name;
     private String description;
     private Double price;
     private int year;
     private String url;
+
+    @Transient
+    private int age;
+    public int getAge() {
+        return Calendar.getInstance().get(Calendar.YEAR) - year;
+    }
     public Product() {
     }
 
@@ -87,4 +106,5 @@ public class Product {
                 ", url='" + url + '\'' +
                 '}';
     }
+
 }
