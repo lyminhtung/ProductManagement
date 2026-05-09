@@ -3,7 +3,7 @@ package com.user.managements.Controller;
 import com.user.managements.Model.Product;
 import com.user.managements.Model.ResponseObject;
 import com.user.managements.Repositories.ProductRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,39 +13,37 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping(path = "api/v1/product")
+@RequiredArgsConstructor
 public class ProductController {
-    //DI = Dependency Injection
-    @Autowired // giúp cho cái đối tượng repo sẽ được tạo ra ngay khi app chúng ta được tạo
-    private ProductRepository repository;
+
+    private final ProductRepository repository;
+
     @GetMapping("/list")
-    List<Product> listProducts(){
+    List<Product> listProducts() {
         return repository.findAll();
     }
 
     @GetMapping("/{id}")
-    ResponseEntity<ResponseObject> findById(@PathVariable long id){
+    ResponseEntity<ResponseObject> findById(@PathVariable long id) {
         Optional<Product> foundProduct = repository.findById(id);
-        return foundProduct.isPresent() ? ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject("ok","Query Successful",foundProduct)
-        ) : ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                new ResponseObject("Not Found","Cannot find the products with id " + id,"")
-        );
+        return foundProduct.isPresent()
+                ? ResponseEntity.ok(new ResponseObject("ok", "Query successful", foundProduct))
+                : ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ResponseObject("failed", "Cannot find product with id=" + id, ""));
     }
-    @PostMapping("/insert")
-    ResponseEntity<ResponseObject> insertProduct(@RequestBody Product newProduct){
 
-        List<Product> foundProducts = repository.findByName(newProduct.getName().trim());
-        if(foundProducts.size() > 0){
-            return  ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(
-                    new ResponseObject("failed","Product name already taken", "")
-            );
+    @PostMapping("/insert")
+    ResponseEntity<ResponseObject> insertProduct(@RequestBody Product newProduct) {
+        if (repository.existsByName(newProduct.getName().trim())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new ResponseObject("failed", "Product name already taken", ""));
         }
-        return  ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject("ok","Insert Successful", repository.save(newProduct))
-        );
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ResponseObject("ok", "Insert successful", repository.save(newProduct)));
     }
+
     @PutMapping("/{id}")
-    ResponseEntity<ResponseObject> updateProduct(@PathVariable long id, @RequestBody Product newProduct){
+    ResponseEntity<ResponseObject> updateProduct(@PathVariable long id, @RequestBody Product newProduct) {
         Product updatedProduct = repository.findById(id)
                 .map(product -> {
                     product.setName(newProduct.getName().trim());
@@ -55,25 +53,28 @@ public class ProductController {
                     product.setUrl(newProduct.getUrl());
                     return repository.save(product);
                 }).orElseGet(() -> {
+                    // Guard: ensure the new name is not taken before inserting
+                    if (repository.existsByName(newProduct.getName().trim())) {
+                        return null;
+                    }
                     newProduct.setId(id);
                     return repository.save(newProduct);
                 });
-        return ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject("ok","Update Successful", updatedProduct)
-        );
-    }
-    @DeleteMapping("delete/{id}")
-    ResponseEntity<ResponseObject> deleteProduct(@PathVariable long id){
-        boolean exists = repository.existsById(id);
-        if(exists){
-            repository.deleteById(id);
-            return  ResponseEntity.status(HttpStatus.OK).body(
-                    new ResponseObject("ok", "delete successful", "")
-            );
+
+        if (updatedProduct == null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new ResponseObject("failed", "Product name already taken", ""));
         }
-            return  ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    new ResponseObject("Not Found","Cannot find the products with id " + id,"")
-            );
+        return ResponseEntity.ok(new ResponseObject("ok", "Update successful", updatedProduct));
     }
 
+    @DeleteMapping("/delete/{id}")
+    ResponseEntity<ResponseObject> deleteProduct(@PathVariable long id) {
+        if (!repository.existsById(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ResponseObject("failed", "Cannot find product with id=" + id, ""));
+        }
+        repository.deleteById(id);
+        return ResponseEntity.ok(new ResponseObject("ok", "Delete successful", ""));
+    }
 }
